@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { WaiterState } from '../../types/game';
 import { PubMaterials } from '../materials';
+import { createNameBadgeSprite } from '../utils/nameBadge';
+import { createSpeechBubbleSprite, SpeechBubbleRef } from '../utils/speechBubble';
 
 export interface WaiterRef {
   group: THREE.Group;
@@ -8,10 +10,13 @@ export interface WaiterRef {
   rightLeg: THREE.Group;
   tray: THREE.Group;
   head: THREE.Group;
+  nameBadgeSprite: THREE.Sprite;
+  speechBubble: SpeechBubbleRef;
+  showSpeechBubble: (text: string, durationSeconds?: number) => void;
   updateState: (state: WaiterState, delta: number, elapsed: number) => void;
 }
 
-export function buildWaiterModel(materials: PubMaterials): WaiterRef {
+export function buildWaiterModel(materials: PubMaterials, waiterName: string = 'Chú Ba Phục Vụ'): WaiterRef {
   const group = new THREE.Group();
   group.position.set(8, 0, -5);
 
@@ -109,14 +114,47 @@ export function buildWaiterModel(materials: PubMaterials): WaiterRef {
 
   group.add(armsGroup);
 
+  // 5. Overhead 3D Name Badge Sprite
+  const nameBadge = createNameBadgeSprite({
+    name: waiterName,
+    roleType: 'waiter',
+    roleTag: '🛎️ PHỤC VỤ',
+  });
+  nameBadge.sprite.position.set(0, 1.82, 0);
+  nameBadge.sprite.userData = { type: 'waiter' };
+  group.add(nameBadge.sprite);
+
+  // Overhead Speech Bubble
+  const speechBubble = createSpeechBubbleSprite();
+  speechBubble.sprite.position.set(0, 2.1, 0);
+  group.add(speechBubble.sprite);
+
+  const showSpeechBubble = (text: string, durationSeconds: number = 5.0) => {
+    speechBubble.show(text, false, false, durationSeconds);
+  };
+
   // Update waiter animation and positioning based on state
   const currentPos = new THREE.Vector3(8, 0, -5);
   const targetPos = new THREE.Vector3(8, 0, -5);
+  let lastWaiterState = '';
 
   const updateState = (state: WaiterState, delta: number, elapsed: number) => {
+    speechBubble.update(delta);
     targetPos.set(state.position[0], state.position[1], state.position[2]);
     currentPos.lerp(targetPos, Math.min(1, delta * 3.5));
     group.position.copy(currentPos);
+
+    if (state.state !== lastWaiterState) {
+      lastWaiterState = state.state;
+      if (state.state === 'serving_table') {
+        nameBadge.update({ actionText: '🍲 Dạ món tới liền!' });
+        showSpeechBubble('Dạ món nóng hổi của bàn đây ạ! Chúc quý khách ngon miệng! 🍻', 4.5);
+      } else if (state.state === 'walking_to_table') {
+        nameBadge.update({ actionText: '🏃 Mang món ra bàn' });
+      } else {
+        nameBadge.update({ actionText: undefined });
+      }
+    }
 
     const isMoving = state.state === 'walking_to_table' || state.state === 'returning';
 
@@ -155,6 +193,9 @@ export function buildWaiterModel(materials: PubMaterials): WaiterRef {
     rightLeg,
     tray,
     head,
+    nameBadgeSprite: nameBadge.sprite,
+    speechBubble,
+    showSpeechBubble,
     updateState,
   };
 }

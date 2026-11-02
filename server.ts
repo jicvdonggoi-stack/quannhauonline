@@ -427,32 +427,35 @@ io.on('connection', (socket: Socket) => {
     socket.emit('table_left');
   });
 
-  // 5. Send Chat Message / Emoji / Shout
+  // 5. Send Chat Message / Emoji / Shout (Broadcasts to 3D scene speech bubbles)
   socket.on('send_table_chat', (data: { text: string; type?: 'text' | 'shout' | 'cheers' }) => {
     const player = connectedPlayers.get(socket.id);
-    if (!player || player.tableId === null) return;
-
-    const safeText = data.text.trim().slice(0, 140);
+    const safeText = data.text?.trim().slice(0, 140);
     if (!safeText) return;
 
+    const tableId = player?.tableId || 1;
     const msg: ChatMessage = {
       id: 'msg_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-      tableId: player.tableId,
-      senderId: player.id,
-      senderName: player.name,
-      senderAvatar: player.avatar,
+      tableId,
+      senderId: player?.id || 'guest_' + socket.id.slice(0, 5),
+      senderName: player?.name || 'Khách Miền Tây',
+      senderAvatar: player?.avatar,
       text: safeText,
       timestamp: Date.now(),
       type: data.type || 'text',
     };
 
-    const history = tableChatHistories.get(player.tableId) || [];
+    const history = tableChatHistories.get(tableId) || [];
     history.push(msg);
     if (history.length > 50) history.shift();
-    tableChatHistories.set(player.tableId, history);
+    tableChatHistories.set(tableId, history);
 
-    io.to(`table_${player.tableId}`).emit('new_chat_message', msg);
+    // Broadcast to all clients so speech bubble appears in everyone's 3D scene
+    io.emit('new_chat_message', msg);
   });
+
+  // Periodic ambient pub chatter
+  // (Handled below outside connection block)
 
   // 6. Social Actions (cheers, drink, wave, laugh, toast_all)
   socket.on('social_action', (data: { action: string }) => {
@@ -587,6 +590,30 @@ function updateTableStatus(table: Table) {
   else if (count >= table.capacity) table.status = 'full';
   else table.status = 'available';
 }
+
+// Periodic ambient bot chatter to keep 3D speech bubbles popping up across the pub
+const PUB_AMBIENT_QUOTES = [
+  { name: 'Anh Bảy Cần Thơ', tableId: 3, id: 'regular_1', text: '1, 2, 3 DZÔÔÔ! Cạn ly anh em ơi! 🍻', type: 'shout' as const },
+  { name: 'Chú Sáu Bến Tre', tableId: 3, id: 'regular_2', text: 'Bia Saigon ướp lạnh uống đã thiệt! 🍺', type: 'text' as const },
+  { name: 'Ba Đực Long An', tableId: 6, id: 'regular_4', text: 'Mực một nắng với khô mực chấm mắm me hết sảy! 🔥', type: 'text' as const },
+  { name: 'Út Khờ Tiền Giang', tableId: 6, id: 'regular_5', text: 'Dzô trăm phần trăm nha anh em ơi! 🥂', type: 'shout' as const },
+  { name: 'Chú Ba Phục Vụ', tableId: 0, id: 'waiter_01', text: 'Dạ món mới lên bàn thơm phức, chúc bà con ngon miệng! 🍲', type: 'text' as const },
+  { name: 'Bác Sáu Đờn Ca', tableId: 0, id: 'musician', text: 'Khúc Dạ Cổ Hoài Lang này nhậu là thấm vô ruột nghen! 🎶', type: 'text' as const },
+];
+
+setInterval(() => {
+  const quote = PUB_AMBIENT_QUOTES[Math.floor(Math.random() * PUB_AMBIENT_QUOTES.length)];
+  const msg: ChatMessage = {
+    id: 'ambient_' + Date.now(),
+    tableId: quote.tableId,
+    senderId: quote.id,
+    senderName: quote.name,
+    text: quote.text,
+    timestamp: Date.now(),
+    type: quote.type,
+  };
+  io.emit('new_chat_message', msg);
+}, 22000);
 
 // Dev vs Prod Vite mounting
 async function startServer() {

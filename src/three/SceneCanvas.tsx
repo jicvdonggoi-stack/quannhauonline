@@ -2,18 +2,21 @@ import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { Table, WaiterState } from '../types/game';
+import { Table, WaiterState, ChatMessage } from '../types/game';
 import { PubMaterials } from './materials';
 import { buildPubEnvironment, PubEnvironmentRefs } from './models/PubEnvironment';
 import { buildSingleTableGroup } from './models/TableModels';
 import { buildCharacterModel, CharacterRef } from './models/CharacterModel';
 import { buildWaiterModel, WaiterRef } from './models/WaiterModel';
+import { buildMusicianNPC, buildChefNPC, AtmosphereNPCRef } from './models/AtmosphereNPCs';
 
 interface SceneCanvasProps {
   tables: Table[];
   waiter: WaiterState;
   selectedTableId: number | null;
   myTableId: number | null;
+  myPlayerId?: string | null;
+  recentChat?: ChatMessage | null;
   onSelectTable: (tableId: number, seatIndex?: number) => void;
   onTriggerHotspot?: (action: string) => void;
   cameraViewPreset?: 'overview' | 'my_table' | 'river' | 'grill' | 'music' | 'beer_tap';
@@ -24,6 +27,8 @@ export const SceneCanvas: React.FC<SceneCanvasProps> = ({
   waiter,
   selectedTableId,
   myTableId,
+  myPlayerId,
+  recentChat,
   onSelectTable,
   onTriggerHotspot,
   cameraViewPreset = 'overview',
@@ -33,6 +38,7 @@ export const SceneCanvas: React.FC<SceneCanvasProps> = ({
   const waiterStateRef = useRef<WaiterState>(waiter);
   const selectedTableIdRef = useRef<number | null>(selectedTableId);
   const myTableIdRef = useRef<number | null>(myTableId);
+  const myPlayerIdRef = useRef<string | null>(myPlayerId || null);
   const onSelectTableRef = useRef(onSelectTable);
   const onTriggerHotspotRef = useRef(onTriggerHotspot);
   const cameraPresetRef = useRef(cameraViewPreset);
@@ -41,9 +47,30 @@ export const SceneCanvas: React.FC<SceneCanvasProps> = ({
   waiterStateRef.current = waiter;
   selectedTableIdRef.current = selectedTableId;
   myTableIdRef.current = myTableId;
+  myPlayerIdRef.current = myPlayerId || null;
   onSelectTableRef.current = onSelectTable;
   onTriggerHotspotRef.current = onTriggerHotspot;
   cameraPresetRef.current = cameraViewPreset;
+
+  const triggerSpeechBubbleRef = useRef<((msg: {
+    senderId?: string;
+    senderName?: string;
+    tableId?: number;
+    text: string;
+    isShout?: boolean;
+  }) => void) | null>(null);
+
+  useEffect(() => {
+    if (recentChat && triggerSpeechBubbleRef.current) {
+      triggerSpeechBubbleRef.current({
+        senderId: recentChat.senderId,
+        senderName: recentChat.senderName,
+        tableId: recentChat.tableId,
+        text: recentChat.text,
+        isShout: recentChat.type === 'shout',
+      });
+    }
+  }, [recentChat]);
 
   useEffect(() => {
     const container = mountRef.current;
@@ -152,12 +179,47 @@ export const SceneCanvas: React.FC<SceneCanvasProps> = ({
     scene.add(charactersGroup);
     let activeCharacterRefs: CharacterRef[] = [];
 
-    // Waiter 3D model
-    const waiterRef: WaiterRef = buildWaiterModel(materials);
+    // Waiter 3D model with overhead name badge
+    const waiterRef: WaiterRef = buildWaiterModel(materials, waiterStateRef.current.name || 'Chú Ba Phục Vụ');
     scene.add(waiterRef.group);
 
+    // Atmosphere NPCs with overhead name badges
+    const musicianNPC: AtmosphereNPCRef = buildMusicianNPC(materials);
+    scene.add(musicianNPC.group);
+
+    const chefNPC: AtmosphereNPCRef = buildChefNPC(materials);
+    scene.add(chefNPC.group);
+
     // Function to rebuild tables & characters when data updates
-    const rebuildTablesAndCharacters = () => {
+    let lastSeatingHash = '';
+    const rebuildTablesAndCharacters = (force: boolean = false) => {
+      const currentHash = tablesRef.current
+        .map(
+          (t) =>
+            t.id +
+            ':' +
+            t.seats
+              .map((s) => (s.player ? s.player.id + '-' + s.player.name : 'empty'))
+              .join(',')
+        )
+        .join(';');
+
+      if (!force && currentHash === lastSeatingHash && activeCharacterRefs.length > 0) {
+        // Only reactively update live player action state without tearing down meshes or speech bubbles
+        tablesRef.current.forEach((t) => {
+          t.seats.forEach((s) => {
+            if (s.player) {
+              const char = activeCharacterRefs.find((c) => c.player.id === s.player!.id);
+              if (char) {
+                char.player.currentAction = s.player.currentAction;
+              }
+            }
+          });
+        });
+        return;
+      }
+      lastSeatingHash = currentHash;
+
       // Clear old tables
       while (tablesGroup.children.length > 0) {
         tablesGroup.remove(tablesGroup.children[0]);
@@ -172,10 +234,11 @@ export const SceneCanvas: React.FC<SceneCanvasProps> = ({
         const tableGroup = buildSingleTableGroup(table, materials);
         tablesGroup.add(tableGroup);
 
-        // Add seated characters
+        // Add seated characters with overhead name badges & 3D speech bubbles
         table.seats.forEach((seat) => {
           if (seat.player) {
-            const charRef = buildCharacterModel(seat.player, materials);
+            const isSelf = Boolean(myPlayerIdRef.current && seat.player.id === myPlayerIdRef.current);
+            const charRef = buildCharacterModel(seat.player, materials, isSelf, table.id);
             const chairDistance = 1.35;
             const chairAngle = (seat.seatIndex * 2 * Math.PI) / 6;
 
@@ -193,9 +256,79 @@ export const SceneCanvas: React.FC<SceneCanvasProps> = ({
       });
     };
 
-    rebuildTablesAndCharacters();
+    rebuildTablesAndCharacters(true);
 
-    // 6. Raycasting Interaction (Click table or chair)
+    // Dynamic 3D Speech Bubble trigger for players, waiter & NPCs
+    const triggerSpeechBubble = (msg: {
+      senderId?: string;
+      senderName?: string;
+      tableId?: number;
+      text: string;
+      isShout?: boolean;
+    }) => {
+      if (!msg.text) return;
+      const isShout = Boolean(msg.isShout);
+      let matched = false;
+
+      // 1. Try matching seated character by player id
+      if (msg.senderId) {
+        const char = activeCharacterRefs.find((c) => c.player.id === msg.senderId);
+        if (char) {
+          const isSelf = Boolean(myPlayerIdRef.current && msg.senderId === myPlayerIdRef.current);
+          char.showSpeechBubble(msg.text, isSelf, isShout, 7.0);
+          matched = true;
+        }
+      }
+
+      // 2. Try matching by sender name
+      if (!matched && msg.senderName) {
+        const lowerName = msg.senderName.toLowerCase();
+        const char = activeCharacterRefs.find(
+          (c) => c.player.name.toLowerCase() === lowerName
+        );
+        if (char) {
+          const isSelf = Boolean(myPlayerIdRef.current && char.player.id === myPlayerIdRef.current);
+          char.showSpeechBubble(msg.text, isSelf, isShout, 7.0);
+          matched = true;
+        } else if (lowerName.includes('ba') || lowerName.includes('phục vụ')) {
+          waiterRef.showSpeechBubble(msg.text, 6.0);
+          matched = true;
+        } else if (lowerName.includes('sáu') || lowerName.includes('đờn ca')) {
+          musicianNPC.showSpeechBubble(msg.text, 6.0);
+          matched = true;
+        } else if (lowerName.includes('tư') || lowerName.includes('bếp') || lowerName.includes('nướng')) {
+          chefNPC.showSpeechBubble(msg.text, 6.0);
+          matched = true;
+        }
+      }
+
+      // 3. Fallback to any character at that table if tableId matches
+      if (!matched && msg.tableId) {
+        const table = tablesRef.current.find((t) => t.id === msg.tableId);
+        if (table) {
+          const seatedPlayer = table.seats.find((s) => s.player)?.player;
+          if (seatedPlayer) {
+            const char = activeCharacterRefs.find((c) => c.player.id === seatedPlayer.id);
+            if (char) {
+              char.showSpeechBubble(msg.text, false, isShout, 7.0);
+              matched = true;
+            }
+          }
+        }
+      }
+
+      // 4. Fallback if user themselves sent it
+      if (!matched && myPlayerIdRef.current) {
+        const myChar = activeCharacterRefs.find((c) => c.player.id === myPlayerIdRef.current);
+        if (myChar) {
+          myChar.showSpeechBubble(msg.text, true, isShout, 7.0);
+        }
+      }
+    };
+
+    triggerSpeechBubbleRef.current = triggerSpeechBubble;
+
+    // 6. Raycasting Interaction (Click table, chair, or character)
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
 
@@ -205,7 +338,14 @@ export const SceneCanvas: React.FC<SceneCanvasProps> = ({
       mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
       raycaster.setFromCamera(mouse, camera);
-      const clickableTargets = [...tablesGroup.children, ...envRefs.hotspotMarkers];
+      const clickableTargets = [
+        ...tablesGroup.children,
+        ...charactersGroup.children,
+        ...envRefs.hotspotMarkers,
+        musicianNPC.group,
+        chefNPC.group,
+        waiterRef.group,
+      ];
       const intersects = raycaster.intersectObjects(clickableTargets, true);
 
       if (intersects.length > 0) {
@@ -219,7 +359,34 @@ export const SceneCanvas: React.FC<SceneCanvasProps> = ({
             onSelectTableRef.current(obj.userData.tableId);
           } else if (obj.userData.type === 'seat') {
             onSelectTableRef.current(obj.userData.tableId, obj.userData.seatIndex);
+          } else if (obj.userData.type === 'character') {
+            if (obj.userData.playerId) {
+              const char = activeCharacterRefs.find((c) => c.player.id === obj?.userData?.playerId);
+              if (char) {
+                const pubGreetings = [
+                  'Vô anh em ơi! Trăm phần trăm nha! 🍻',
+                  'Mồi bén quá trời bén, làm hớp bia đã thiệt! 🍺',
+                  'Chào anh em miền Tây, cạn ly nhen! 🥂',
+                  'Haha vui quá, dzô 1 2 3 dzôôô! 🎉',
+                ];
+                const greeting = pubGreetings[Math.floor(Math.random() * pubGreetings.length)];
+                char.showSpeechBubble(greeting, false, false, 5.0);
+              }
+              const foundTable = tablesRef.current.find((t) =>
+                t.seats.some((s) => s.player?.id === obj?.userData?.playerId)
+              );
+              if (foundTable) {
+                onSelectTableRef.current(foundTable.id);
+              }
+            }
+          } else if (obj.userData.type === 'waiter') {
+            waiterRef.showSpeechBubble('Dạ có chú Ba đây! Bàn mình cần gọi thêm mồi hay bia cứ ới em nghen! 🍻', 5.0);
           } else if (obj.userData.type === 'hotspot') {
+            if (obj.userData.action === 'music') {
+              musicianNPC.showSpeechBubble('Đờn bài Dạ Cổ Hoài Lang khúc này ngâm nga ly bia là hết sảy nghen bà con! 🎶', 5.0);
+            } else if (obj.userData.action === 'grill') {
+              chefNPC.showSpeechBubble('Mực một nắng, cá lóc nướng trui nóng hổi thơm phức đây bà con ơi! 🔥', 5.0);
+            }
             onTriggerHotspotRef.current?.(obj.userData.action);
           }
         }
@@ -232,7 +399,14 @@ export const SceneCanvas: React.FC<SceneCanvasProps> = ({
       mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
       raycaster.setFromCamera(mouse, camera);
-      const clickableTargets = [...tablesGroup.children, ...envRefs.hotspotMarkers];
+      const clickableTargets = [
+        ...tablesGroup.children,
+        ...charactersGroup.children,
+        ...envRefs.hotspotMarkers,
+        musicianNPC.group,
+        chefNPC.group,
+        waiterRef.group,
+      ];
       const intersects = raycaster.intersectObjects(clickableTargets, true);
       container.style.cursor = intersects.length > 0 ? 'pointer' : 'default';
     };
@@ -359,9 +533,13 @@ export const SceneCanvas: React.FC<SceneCanvasProps> = ({
       // Waiter animation and movement
       waiterRef.updateState(waiterStateRef.current, delta, elapsed);
 
+      // Atmosphere NPCs animation (Folk Musician & BBQ Chef)
+      musicianNPC.update(elapsed, delta);
+      chefNPC.update(elapsed, delta);
+
       // Characters dynamic animation
       activeCharacterRefs.forEach((char) => {
-        char.updateAnimation(elapsed);
+        char.updateAnimation(elapsed, delta);
       });
 
       renderer.render(scene, camera);
@@ -397,6 +575,7 @@ export const SceneCanvas: React.FC<SceneCanvasProps> = ({
     }, 1500);
 
     return () => {
+      triggerSpeechBubbleRef.current = null;
       clearInterval(intervalChecker);
       window.removeEventListener('resize', onResize);
       renderer.domElement.removeEventListener('pointerdown', onPointerDown);

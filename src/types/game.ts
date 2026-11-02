@@ -101,7 +101,7 @@ export interface ChatMessage {
   tableId: number; // tableId or 0 for tavern general announcement
   senderId: string;
   senderName: string;
-  senderAvatar: AvatarConfig;
+  senderAvatar?: AvatarConfig;
   text: string;
   timestamp: number;
   type?: 'text' | 'shout' | 'system' | 'cheers';

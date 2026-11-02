@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { Player } from '../../types/game';
 import { PubMaterials } from '../materials';
+import { createNameBadgeSprite } from '../utils/nameBadge';
+import { createSpeechBubbleSprite, SpeechBubbleRef } from '../utils/speechBubble';
 
 export interface CharacterRef {
   group: THREE.Group;
@@ -10,10 +12,18 @@ export interface CharacterRef {
   torso: THREE.Mesh;
   beerMug: THREE.Group;
   player: Player;
-  updateAnimation: (time: number) => void;
+  nameBadgeSprite: THREE.Sprite;
+  speechBubble: SpeechBubbleRef;
+  showSpeechBubble: (text: string, isSelf?: boolean, isShout?: boolean, durationSeconds?: number) => void;
+  updateAnimation: (time: number, delta?: number) => void;
 }
 
-export function buildCharacterModel(player: Player, materials: PubMaterials): CharacterRef {
+export function buildCharacterModel(
+  player: Player,
+  materials: PubMaterials,
+  isSelf: boolean = false,
+  tableNumber?: number
+): CharacterRef {
   const group = new THREE.Group();
   group.userData = { type: 'character', playerId: player.id };
 
@@ -184,11 +194,45 @@ export function buildCharacterModel(player: Player, materials: PubMaterials): Ch
   beerMug.position.set(0, -0.22, 0.26);
   rightArm.add(beerMug);
 
-  group.add(rightArm);
+  // 7. Overhead 3D Name Badge Sprite
+  const tableText = tableNumber ? `Bàn ${tableNumber < 10 ? '0' + tableNumber : tableNumber}` : undefined;
+  const nameBadge = createNameBadgeSprite({
+    name: player.name || 'Khách Miền Tây',
+    isSelf,
+    roleType: isSelf ? 'self' : 'guest',
+    tableText,
+  });
+  // Position cleanly floating above the head / nón lá
+  nameBadge.sprite.position.set(0, 1.48, 0);
+  nameBadge.sprite.userData = { type: 'character', playerId: player.id };
+  group.add(nameBadge.sprite);
+
+  // 8. Overhead 3D Comic Speech Bubble Sprite (Stacked directly above name badge)
+  const speechBubble = createSpeechBubbleSprite();
+  speechBubble.sprite.position.set(0, 1.76, 0);
+  group.add(speechBubble.sprite);
+
+  const showSpeechBubble = (text: string, selfMsg: boolean = isSelf, isShout: boolean = false, durationSeconds: number = 6.0) => {
+    speechBubble.show(text, selfMsg, isShout, durationSeconds);
+  };
 
   // Animation controller
-  const updateAnimation = (time: number) => {
+  let lastAction = player.currentAction;
+
+  const updateAnimation = (time: number, delta: number = 0.016) => {
+    speechBubble.update(delta);
     const action = player.currentAction;
+
+    // Reactively update overhead badge if action changed
+    if (action !== lastAction) {
+      lastAction = action;
+      let actionText: string | undefined = undefined;
+      if (action === 'cheers' || action === 'toast_all') actionText = '🍻 1, 2, 3 DZÔÔÔ!';
+      else if (action === 'drink') actionText = '🍺 Khà... Đã quá!';
+      else if (action === 'wave') actionText = '👋 Chào anh em!';
+      else if (action === 'laugh') actionText = '🤣 Haha vui!';
+      nameBadge.update({ actionText });
+    }
 
     if (action === 'cheers' || action === 'toast_all') {
       // Raise arm high forward to center of table ("1, 2, 3 DZÔÔÔ!")
@@ -228,6 +272,9 @@ export function buildCharacterModel(player: Player, materials: PubMaterials): Ch
     torso,
     beerMug,
     player,
+    nameBadgeSprite: nameBadge.sprite,
+    speechBubble,
+    showSpeechBubble,
     updateAnimation,
   };
 }

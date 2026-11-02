@@ -9,7 +9,7 @@ import { WelcomeModal } from './components/WelcomeModal';
 import { CharacterCreatorModal } from './components/CharacterCreatorModal';
 import { TableDetailModal } from './components/TableDetailModal';
 import { OrderMenuModal } from './components/OrderMenuModal';
-import { TableChatBox } from './components/TableChatBox';
+import { SpeechBubbleDirectInput } from './components/SpeechBubbleDirectInput';
 import { TableListModal } from './components/TableListModal';
 import { DrinkingMinigamesModal } from './components/DrinkingMinigamesModal';
 import { ZoneNavigation } from './components/ZoneNavigation';
@@ -90,6 +90,8 @@ export default function App() {
   const [cameraPreset, setCameraPreset] = useState<'overview' | 'my_table' | 'river' | 'grill' | 'music' | 'beer_tap'>('overview');
   const [isChatOpen, setIsChatOpen] = useState(false);
 
+  // Recent chat message to display as a 3D speech bubble above character
+  const [recentChat, setRecentChat] = useState<ChatMessage | null>(null);
   // Chat messages for current table
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
 
@@ -125,7 +127,7 @@ export default function App() {
       setMyPlayer((prev) => (prev ? { ...prev, tableId: data.table.id, seatIndex: data.seatIndex } : null));
       setChatMessages(data.chatHistory || []);
       setCameraPreset('my_table');
-      setIsChatOpen(true);
+      // No chat window opened; ready for direct 3D speech bubbles
       soundManager.playBeerCrack();
     });
 
@@ -137,6 +139,7 @@ export default function App() {
     });
 
     s.on('new_chat_message', (msg: ChatMessage) => {
+      setRecentChat(msg);
       setChatMessages((prev) => [...prev, msg]);
       if (msg.type === 'shout') {
         soundManager.playCheers();
@@ -224,22 +227,24 @@ export default function App() {
     setSelectedTableId(null);
   }, [socket]);
 
-  // Send Chat message
+  // Send Chat message directly to 3D speech bubble
   const handleSendMessage = useCallback((text: string, type: 'text' | 'shout' | 'cheers' = 'text') => {
+    const localMsg: ChatMessage = {
+      id: 'msg_' + Date.now(),
+      tableId: myPlayer?.tableId || 1,
+      senderId: myPlayer?.id || 'me',
+      senderName: myPlayer?.name || 'Bạn',
+      senderAvatar: myPlayer?.avatar,
+      text,
+      timestamp: Date.now(),
+      type,
+    };
+    setRecentChat(localMsg);
+
     if (socket) {
       socket.emit('send_table_chat', { text, type });
-    } else if (myPlayer && myPlayer.tableId !== null) {
-      const msg: ChatMessage = {
-        id: 'msg_' + Date.now(),
-        tableId: myPlayer.tableId,
-        senderId: myPlayer.id,
-        senderName: myPlayer.name,
-        senderAvatar: myPlayer.avatar,
-        text,
-        timestamp: Date.now(),
-        type,
-      };
-      setChatMessages((prev) => [...prev, msg]);
+    } else {
+      setChatMessages((prev) => [...prev, localMsg]);
     }
   }, [socket, myPlayer]);
 
@@ -275,6 +280,28 @@ export default function App() {
         };
 
     setMyPlayer(updated);
+    try {
+      localStorage.setItem('quan_nhau_player', JSON.stringify(updated));
+    } catch {
+      // ignore
+    }
+
+    if (updated.tableId !== null && updated.seatIndex !== null) {
+      setTables((prev) =>
+        prev.map((t) => {
+          if (t.id === updated.tableId) {
+            const newSeats = [...t.seats];
+            newSeats[updated.seatIndex!] = {
+              ...newSeats[updated.seatIndex!],
+              player: updated,
+            };
+            return { ...t, seats: newSeats };
+          }
+          return t;
+        })
+      );
+    }
+
     setIsCharacterCreatorOpen(false);
 
     if (socket) {
@@ -342,6 +369,8 @@ export default function App() {
         waiter={waiter}
         selectedTableId={selectedTableId}
         myTableId={myPlayer?.tableId || null}
+        myPlayerId={myPlayer?.id || null}
+        recentChat={recentChat}
         onSelectTable={handleSelectTable}
         onTriggerHotspot={handleTriggerHotspot}
         cameraViewPreset={cameraPreset}
@@ -365,7 +394,15 @@ export default function App() {
         onPlayFolkMusic={handlePlayFolkMusic}
       />
 
-      {/* 3. Collapsible Bottom Controls Dock */}
+      {/* 3. Direct Speech Bubble Input (Chat trực tiếp trên bóng thoại 3D - Không khung chat) */}
+      <SpeechBubbleDirectInput
+        tableName={currentTable?.name}
+        hasTable={myPlayer?.tableId !== null}
+        onSendMessage={handleSendMessage}
+        onTriggerAction={handleTriggerAction}
+      />
+
+      {/* 4. Collapsible Bottom Controls Dock */}
       <BottomDock
         hasTable={myPlayer?.tableId !== null}
         tableName={currentTable?.name}
@@ -376,22 +413,7 @@ export default function App() {
         cameraPreset={cameraPreset}
         onChangeCameraPreset={setCameraPreset}
         onOpenTableList={() => setIsTableListOpen(true)}
-        onToggleChat={() => setIsChatOpen((prev) => !prev)}
-        isChatOpen={isChatOpen}
       />
-
-      {/* 4. Table Chat Room (Visible when toggled open and seated at a table) */}
-      {isChatOpen && myPlayer?.tableId !== null && currentTable && (
-        <TableChatBox
-          tableId={currentTable.id}
-          tableName={currentTable.name}
-          messages={chatMessages}
-          myPlayer={myPlayer}
-          onSendMessage={handleSendMessage}
-          onTriggerAction={handleTriggerAction}
-          onClose={() => setIsChatOpen(false)}
-        />
-      )}
 
       {/* 5. Modals */}
       {isWelcomeOpen && (
