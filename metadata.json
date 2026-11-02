@@ -1,0 +1,6 @@
+{
+  "name": "Quán Nhậu Miền Tây Online",
+  "description": "Website game xã hội 3D Isometric multiplayer quán nhậu miền Tây với 10 bàn nhậu, gọi món, cụng ly và trò chuyện thời gian thực.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
