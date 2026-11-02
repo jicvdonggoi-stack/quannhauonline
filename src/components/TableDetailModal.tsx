@@ -31,10 +31,13 @@ export const TableDetailModal: React.FC<TableDetailModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-6 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-lg rounded-2xl border border-amber-600/40 bg-stone-900 shadow-2xl text-stone-100 overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="relative w-full max-w-lg rounded-t-3xl sm:rounded-2xl border-t sm:border border-amber-600/40 bg-stone-900 shadow-2xl text-stone-100 overflow-hidden max-h-[92vh] flex flex-col">
+        {/* Mobile drag bar */}
+        <div className="w-12 h-1 bg-stone-700 rounded-full mx-auto my-2 sm:hidden shrink-0" />
+
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-stone-800 bg-stone-950/80">
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-stone-800 bg-stone-950/90 shrink-0">
           <div>
             <div className="flex items-center gap-2">
               <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase bg-amber-500/20 text-amber-300 border border-amber-500/30">
@@ -48,20 +51,20 @@ export const TableDetailModal: React.FC<TableDetailModalProps> = ({
                 {occupiedCount >= table.capacity ? 'ĐÃ ĐẦY' : occupiedCount === 0 ? 'BÀN TRỐNG' : 'ĐANG CÓ KHÁCH'}
               </span>
             </div>
-            <div className="text-xs text-stone-400 mt-1">
+            <div className="text-xs text-stone-400 mt-0.5">
               {occupiedCount}/{table.capacity} NGƯỜI • Còn {freeCount} chỗ trống
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-stone-400 hover:text-stone-200 hover:bg-stone-800 cursor-pointer"
+            className="p-2 rounded-xl text-stone-400 hover:text-stone-200 hover:bg-stone-800 active:scale-95 cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* 6 Seats Layout */}
-        <div className="p-6 space-y-6">
+        <div className="p-4 sm:p-6 space-y-5 overflow-y-auto flex-1 overscroll-contain">
           <div>
             <div className="text-xs font-semibold text-stone-300 uppercase tracking-wider mb-3">
               Danh Sách 6 Ghế Ngồi Quanh Bàn

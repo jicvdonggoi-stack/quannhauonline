@@ -86,25 +86,39 @@ export const SceneCanvas: React.FC<SceneCanvasProps> = ({
     scene.environment = pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture;
     pmremGenerator.dispose();
 
-    // 4. Elevated Isometric Camera
+    // 4. Elevated Isometric Camera - Dynamically adapted for Mobile vs Desktop
+    const isMobileAspect = container.clientWidth < container.clientHeight || container.clientWidth < 640;
+    const initialFov = isMobileAspect ? 58 : 42;
     const camera = new THREE.PerspectiveCamera(
-      42,
+      initialFov,
       container.clientWidth / container.clientHeight,
       0.5,
-      120
+      140
     );
-    camera.position.set(22, 19, 22);
+    
+    // Position camera slightly higher and farther on mobile to capture all 10 tables clearly
+    if (isMobileAspect) {
+      camera.position.set(26, 23, 26);
+    } else {
+      camera.position.set(22, 19, 22);
+    }
 
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
-    controls.dampingFactor = 0.05;
+    controls.dampingFactor = 0.08;
     controls.target.set(0, 1.2, 0);
-    controls.minDistance = 8;
-    controls.maxDistance = 45;
-    controls.minPolarAngle = Math.PI / 6; // 30 deg
-    controls.maxPolarAngle = Math.PI * 0.42; // ~75 deg (keep elevated)
-    controls.maxAzimuthAngle = Math.PI * 0.9;
-    controls.minAzimuthAngle = -Math.PI * 0.9;
+    controls.minDistance = 6;
+    controls.maxDistance = 50;
+    controls.minPolarAngle = Math.PI / 8; // ~22 deg
+    controls.maxPolarAngle = Math.PI * 0.44; // ~79 deg (keep elevated isometric feel)
+    controls.maxAzimuthAngle = Math.PI * 0.95;
+    controls.minAzimuthAngle = -Math.PI * 0.95;
+
+    // Mobile touch controls configuration
+    controls.touches = {
+      ONE: THREE.TOUCH.ROTATE,
+      TWO: THREE.TOUCH.DOLLY_PAN,
+    };
 
     // 5. Lighting Rig
     // Warm sun/key light (Sunset Mekong warmth)
@@ -265,8 +279,13 @@ export const SceneCanvas: React.FC<SceneCanvasProps> = ({
       }
 
       // Default overview
+      const isMob = container.clientWidth < container.clientHeight || container.clientWidth < 640;
       targetLookAt.set(0, 1.2, 0);
-      targetCameraPos.set(22, 19, 22);
+      if (isMob) {
+        targetCameraPos.set(26, 23, 26);
+      } else {
+        targetCameraPos.set(22, 19, 22);
+      }
     };
 
     // 8. Render Loop with Smooth Animations
@@ -363,7 +382,9 @@ export const SceneCanvas: React.FC<SceneCanvasProps> = ({
     // Resize handler
     const onResize = () => {
       if (!container) return;
+      const isMob = container.clientWidth < container.clientHeight || container.clientWidth < 640;
       camera.aspect = container.clientWidth / container.clientHeight;
+      camera.fov = isMob ? 58 : 42;
       camera.updateProjectionMatrix();
       renderer.setSize(container.clientWidth, container.clientHeight);
     };

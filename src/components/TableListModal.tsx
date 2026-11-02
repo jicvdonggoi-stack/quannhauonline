@@ -16,22 +16,25 @@ export const TableListModal: React.FC<TableListModalProps> = ({
   onClose,
 }) => {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-2xl max-h-[85vh] flex flex-col rounded-2xl border border-stone-700 bg-stone-900 shadow-2xl text-stone-100 overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-6 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="relative w-full max-w-2xl max-h-[92vh] sm:max-h-[85vh] flex flex-col rounded-t-3xl sm:rounded-2xl border-t sm:border border-stone-700 bg-stone-900 shadow-2xl text-stone-100 overflow-hidden">
+        {/* Mobile drag handle */}
+        <div className="w-12 h-1 bg-stone-700 rounded-full mx-auto my-2 sm:hidden shrink-0" />
+
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-stone-800 bg-stone-950/80">
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-stone-800 bg-stone-950/90 shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="p-2 rounded-xl bg-amber-500/20 text-amber-400">
-              <MapPin className="w-5 h-5" />
+              <MapPin className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-amber-300">Sơ Đồ 10 Bàn Quán Anh Út Giào</h2>
-              <p className="text-xs text-stone-400">Chọn bàn để tham gia hoặc quan sát hoạt động</p>
+              <h2 className="text-base sm:text-lg font-bold text-amber-300">10 Bàn Quán Anh Út Giào</h2>
+              <p className="text-[11px] sm:text-xs text-stone-400">Chạm vào bàn để kéo ghế ngồi hoặc xem khách nhậu</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-stone-400 hover:text-stone-200 hover:bg-stone-800 cursor-pointer"
+            className="p-2 rounded-xl text-stone-400 hover:text-stone-200 hover:bg-stone-800 active:scale-95 cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>

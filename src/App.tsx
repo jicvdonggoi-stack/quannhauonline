@@ -88,6 +88,7 @@ export default function App() {
   const [isMinigameOpen, setIsMinigameOpen] = useState(false);
   const [minigameTab, setMinigameTab] = useState<'clicker' | 'dice' | 'wheel' | 'fortune'>('clicker');
   const [cameraPreset, setCameraPreset] = useState<'overview' | 'my_table' | 'river' | 'grill' | 'music' | 'beer_tap'>('overview');
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   // Chat messages for current table
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -124,12 +125,14 @@ export default function App() {
       setMyPlayer((prev) => (prev ? { ...prev, tableId: data.table.id, seatIndex: data.seatIndex } : null));
       setChatMessages(data.chatHistory || []);
       setCameraPreset('my_table');
+      setIsChatOpen(true);
       soundManager.playBeerCrack();
     });
 
     s.on('table_left', () => {
       setMyPlayer((prev) => (prev ? { ...prev, tableId: null, seatIndex: null } : null));
       setChatMessages([]);
+      setIsChatOpen(false);
       setCameraPreset('overview');
     });
 
@@ -372,10 +375,13 @@ export default function App() {
         onLeaveTable={handleLeaveTable}
         cameraPreset={cameraPreset}
         onChangeCameraPreset={setCameraPreset}
+        onOpenTableList={() => setIsTableListOpen(true)}
+        onToggleChat={() => setIsChatOpen((prev) => !prev)}
+        isChatOpen={isChatOpen}
       />
 
-      {/* 4. Table Chat Room (Only visible when seated at a table) */}
-      {myPlayer?.tableId !== null && currentTable && (
+      {/* 4. Table Chat Room (Visible when toggled open and seated at a table) */}
+      {isChatOpen && myPlayer?.tableId !== null && currentTable && (
         <TableChatBox
           tableId={currentTable.id}
           tableName={currentTable.name}
@@ -383,6 +389,7 @@ export default function App() {
           myPlayer={myPlayer}
           onSendMessage={handleSendMessage}
           onTriggerAction={handleTriggerAction}
+          onClose={() => setIsChatOpen(false)}
         />
       )}
 

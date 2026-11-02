@@ -120,30 +120,33 @@ export const CharacterCreatorModal: React.FC<CharacterCreatorModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-6 bg-black/80 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-200">
-      <div className="relative w-full max-w-2xl my-auto rounded-2xl border border-stone-700 bg-stone-900 shadow-2xl text-stone-100 overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="relative w-full max-w-2xl max-h-[94vh] sm:max-h-[88vh] flex flex-col rounded-t-3xl sm:rounded-2xl border-t sm:border border-stone-700 bg-stone-900 shadow-2xl text-stone-100 overflow-hidden">
+        {/* Mobile drag handle */}
+        <div className="w-12 h-1 bg-stone-700 rounded-full mx-auto my-2 sm:hidden shrink-0" />
+
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-stone-800 bg-stone-950/60">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-stone-800 bg-stone-950/80 shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="p-2 rounded-xl bg-amber-500/20 text-amber-400">
-              <User className="w-5 h-5" />
+              <User className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-amber-300">Tạo Nhân Vật Quán Nhậu</h2>
-              <p className="text-xs text-stone-400">Chọn ngoại hình và phong cách miền Tây</p>
+              <h2 className="text-base sm:text-lg font-bold text-amber-300">Tạo Nhân Vật Quán Nhậu</h2>
+              <p className="text-[11px] sm:text-xs text-stone-400">Chọn ngoại hình và phong cách miền Tây</p>
             </div>
           </div>
           {onClose && (
             <button
               onClick={onClose}
-              className="p-1.5 rounded-lg text-stone-400 hover:text-stone-200 hover:bg-stone-800"
+              className="p-2 rounded-xl text-stone-400 hover:text-stone-200 hover:bg-stone-800 active:scale-95 cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
           )}
         </div>
 
-        <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
+        <div className="p-4 sm:p-6 space-y-5 overflow-y-auto flex-1 overscroll-contain">
           {/* Quick Presets */}
           <div>
             <label className="block text-xs font-semibold text-amber-400 uppercase tracking-wider mb-2.5">

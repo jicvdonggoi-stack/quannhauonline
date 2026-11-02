@@ -58,29 +58,32 @@ export const OrderMenuModal: React.FC<OrderMenuModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-4xl h-[90vh] flex flex-col rounded-2xl border border-stone-700 bg-stone-900 shadow-2xl text-stone-100 overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="relative w-full max-w-4xl h-[94vh] sm:h-[90vh] flex flex-col rounded-t-3xl sm:rounded-2xl border-t sm:border border-stone-700 bg-stone-900 shadow-2xl text-stone-100 overflow-hidden">
+        {/* Mobile drag handle */}
+        <div className="w-12 h-1 bg-stone-700 rounded-full mx-auto my-2 sm:hidden shrink-0" />
+
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-stone-800 bg-stone-950/80 shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-amber-500/20 text-amber-400">
-              <Utensils className="w-5 h-5" />
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-stone-800 bg-stone-950/90 shrink-0">
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            <div className="p-2 sm:p-2.5 rounded-xl bg-amber-500/20 text-amber-400 shrink-0">
+              <Utensils className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-lg font-bold text-amber-300">Menu Quán Nhậu Anh Út Giào</h2>
-                <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-bold border border-amber-500/40">
+                <h2 className="text-base sm:text-lg font-bold text-amber-300">Menu Quán Anh Út Giào</h2>
+                <span className="text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-bold border border-amber-500/40">
                   {tableName}
                 </span>
               </div>
-              <p className="text-xs text-stone-400">
-                8 loại bia ướp xô đá • 8 loại nước giải khát • 30 món mồi bén chuẩn miền Tây
+              <p className="text-[11px] sm:text-xs text-stone-400">
+                Bia ướp xô đá • Nước giải khát • 30 món mồi bén
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-stone-400 hover:text-stone-200 hover:bg-stone-800 cursor-pointer"
+            className="p-2 rounded-xl text-stone-400 hover:text-stone-200 hover:bg-stone-800 active:scale-95 cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>

@@ -176,50 +176,53 @@ export const DrinkingMinigamesModal: React.FC<DrinkingMinigamesModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-6 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-2xl max-h-[90vh] flex flex-col rounded-3xl border border-amber-600/50 bg-stone-900 shadow-2xl text-stone-100 overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="relative w-full max-w-2xl max-h-[94vh] sm:max-h-[90vh] flex flex-col rounded-t-3xl sm:rounded-3xl border-t sm:border border-amber-600/50 bg-stone-900 shadow-2xl text-stone-100 overflow-hidden">
+        {/* Mobile drag handle */}
+        <div className="w-12 h-1 bg-stone-700 rounded-full mx-auto my-2 sm:hidden shrink-0" />
+
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-stone-800 bg-stone-950/80 shrink-0">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-stone-800 bg-stone-950/90 shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="p-2 rounded-xl bg-amber-500/20 text-amber-400">
-              <Sparkles className="w-5 h-5" />
+              <Sparkles className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-amber-300">Giao Lưu & Trò Chơi Bàn Nhậu</h2>
-              <p className="text-xs text-stone-400">Tương tác thư giãn, lắc xí ngầu, quay vòng xoay & tích điểm sảng khoái</p>
+              <h2 className="text-base sm:text-lg font-bold text-amber-300">Trò Chơi Bàn Nhậu Miền Tây</h2>
+              <p className="text-[11px] sm:text-xs text-stone-400">Rót bia tích điểm • Lắc xí ngầu • Vòng quay • Rút quẻ</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-stone-400 hover:text-stone-200 hover:bg-stone-800 cursor-pointer"
+            className="p-2 rounded-xl text-stone-400 hover:text-stone-200 hover:bg-stone-800 active:scale-95 cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Tab Switcher */}
-        <div className="flex overflow-x-auto border-b border-stone-800 bg-stone-950/40 px-4 py-2 gap-2 scrollbar-none shrink-0">
+        <div className="flex overflow-x-auto border-b border-stone-800 bg-stone-950/40 px-3 sm:px-4 py-2 gap-1.5 scrollbar-none shrink-0">
           <button
             onClick={() => setActiveTab('clicker')}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap active:scale-95 transition-all cursor-pointer ${
               activeTab === 'clicker'
                 ? 'bg-amber-500 text-stone-950 font-bold shadow-md'
                 : 'text-stone-400 hover:text-stone-200 hover:bg-stone-800'
             }`}
           >
-            <Beer className="w-4 h-4" />
+            <Beer className="w-3.5 h-3.5" />
             <span>Rót Bia Tích Điểm</span>
           </button>
 
           <button
             onClick={() => setActiveTab('dice')}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap active:scale-95 transition-all cursor-pointer ${
               activeTab === 'dice'
                 ? 'bg-amber-500 text-stone-950 font-bold shadow-md'
                 : 'text-stone-400 hover:text-stone-200 hover:bg-stone-800'
             }`}
           >
-            <Dices className="w-4 h-4" />
+            <Dices className="w-3.5 h-3.5" />
             <span>Lắc Xí Ngầu</span>
           </button>
 

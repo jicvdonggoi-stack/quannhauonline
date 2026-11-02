@@ -9,7 +9,17 @@
     overflow: hidden;
     user-select: none;
     -webkit-user-select: none;
+    -webkit-touch-callout: none;
     background-color: #0c0a09;
     font-family: 'Be Vietnam Pro', system-ui, -apple-system, sans-serif;
   }
 }
+
+.pb-safe {
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+}
+
+.pt-safe {
+  padding-top: max(0.5rem, env(safe-area-inset-top));
+}
+
